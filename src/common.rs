@@ -92,6 +92,13 @@ pub struct RunCommon {
     /// cause the environment variable `FOO` to be inherited.
     #[arg(long = "env", number_of_values = 1, value_name = "NAME[=VAL]", value_parser = parse_env_var)]
     pub vars: Vec<(String, Option<String>)>,
+    
+    /// Perform audit checks.
+    ///
+    /// The `--audit` flag enables security checks before execution
+    /// and prevent/modify execution if certain checks fail.
+    #[arg(long = "audit")]
+    pub audit: bool,
 }
 
 fn parse_env_var(s: &str) -> Result<(String, Option<String>)> {
@@ -236,6 +243,15 @@ impl RunCommon {
                         #[cfg(feature = "component-model")]
                         {
                             self.ensure_allow_components()?;
+                            if self.audit {
+                                println!("Auditing");
+                                match crate::audit::audit_process(bytes) {
+                                    Ok(()) => {}
+                                    Err(err) => {
+                                        bail!("Component could not be safely run: {}", err)
+                                    }
+                                }
+                            }
                             RunTarget::Component(code.compile_component()?)
                         }
                         #[cfg(not(feature = "component-model"))]

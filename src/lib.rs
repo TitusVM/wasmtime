@@ -5,6 +5,7 @@
 #![deny(missing_docs)]
 
 pub mod commands;
+pub mod audit;
 
 #[cfg(feature = "run")]
 pub(crate) mod common;

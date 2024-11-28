@@ -79,6 +79,8 @@ tokio = { workspace = true, optional = true, features = [ "signal", "macros" ] }
 hyper = { workspace = true, optional = true }
 http = { workspace = true, optional = true }
 http-body-util = { workspace = true, optional = true }
+wasmshield = { path = "../../wasmshield" }
+rustsec = { path = "../rustsec/rustsec" }
 
 [target.'cfg(unix)'.dependencies]
 rustix = { workspace = true, features = ["mm", "param", "process"] }

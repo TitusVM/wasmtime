@@ -1,4 +1,4 @@
-use crate::common::{Profile, RunCommon, RunTarget};
+use crate::common::{self, Profile, RunCommon, RunTarget};
 use anyhow::{anyhow, bail, Result};
 use clap::Parser;
 use std::net::SocketAddr;
@@ -380,8 +380,13 @@ impl ServeCommand {
         log::info!("Listening on {}", self.addr);
 
         let handler = ProxyHandler::new(self, engine, instance);
+        
+        use std::sync::atomic::Ordering;
 
         loop {
+
+            if common::TERMINATE_FLAG.load(Ordering::SeqCst) { bail!("Terminate runtime") }
+
             let (stream, _) = listener.accept().await?;
             let stream = TokioIo::new(stream);
             let h = handler.clone();

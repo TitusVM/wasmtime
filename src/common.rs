@@ -3,6 +3,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use clap::Parser;
 use std::net::TcpListener;
+use std::sync::Arc;
 use std::{fs::File, path::Path, time::Duration};
 use wasmtime::{Engine, Module, Precompiled, StoreLimits, StoreLimitsBuilder};
 use wasmtime_cli_flags::{opt::WasmtimeOptionValue, CommonOptions};
@@ -11,6 +12,10 @@ use wasmtime_wasi::WasiCtxBuilder;
 
 #[cfg(feature = "component-model")]
 use wasmtime::component::Component;
+
+use std::sync::atomic::{AtomicBool, Ordering};
+
+pub static TERMINATE_FLAG: AtomicBool = AtomicBool::new(false);
 
 pub enum RunTarget {
     Core(Module),
@@ -243,8 +248,10 @@ impl RunCommon {
                         #[cfg(feature = "component-model")]
                         {
                             self.ensure_allow_components()?;
+
                             if self.audit {
                                 println!("Auditing");
+
                                 match crate::audit::audit_process(bytes) {
                                     Ok(()) => {}
                                     Err(err) => {
@@ -252,6 +259,27 @@ impl RunCommon {
                                     }
                                 }
                             }
+                            
+                            let bytes_clone = bytes.to_vec();
+
+                            use std::thread;
+                            use std::time::Duration;
+
+                            let terminate_flag = Arc::new(&TERMINATE_FLAG);
+
+                            thread::spawn(move || {
+                                loop {
+                                    thread::sleep(Duration::from_secs(5)); // Adjust the interval as needed
+                                    if let Err(err) = crate::audit::sbom_check(&bytes_clone) {
+                                        eprintln!("SBOM Audit failed during runtime: {}", err);
+                                        terminate_flag.store(true, Ordering::SeqCst);
+                                        break
+                                    } else {
+                                        println!("SBOM Audit passed during runtime");
+                                    }
+                                }
+                                println!("Terminate flag: {}", TERMINATE_FLAG.load(Ordering::SeqCst));
+                            });
                             RunTarget::Component(code.compile_component()?)
                         }
                         #[cfg(not(feature = "component-model"))]

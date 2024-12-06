@@ -47,7 +47,8 @@ pub fn audit_process(bytes: &[u8]) -> Result<(), Error> {
     Ok(())
 }
 
-fn sbom_check(bytes: &[u8]) -> Result<(), Error> {
+/// Run SBOM Check
+pub fn sbom_check(bytes: &[u8]) -> Result<(), Error> {
     let mut vuln_flag = false;
     let mut warn_flag = false;
     match helper_audit(bytes) {

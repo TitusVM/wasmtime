@@ -5,7 +5,7 @@
     allow(irrefutable_let_patterns, unreachable_patterns)
 )]
 
-use crate::common::{Profile, RunCommon, RunTarget};
+use crate::common::{self, Profile, RunCommon, RunTarget};
 
 use anyhow::{anyhow, bail, Context as _, Error, Result};
 use clap::Parser;
@@ -465,6 +465,20 @@ impl RunCommand {
                     linker,
                 )
                 .await?;
+
+                tokio::spawn(async move {
+                    loop {
+                        if common::TERMINATE_FLAG.load(std::sync::atomic::Ordering::SeqCst) {
+                            // The audit thread found a new vulnerability during the runtime
+                            // This exit process is not very clean, but it is the best we can do
+                            // without a more complex runtime.
+                            println!("Terminating due to new vulnerability found during runtime"); 
+                            std::process::abort();
+                        }
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    }
+                });
+
                 let result = command
                     .wasi_cli_run()
                     .call_run(&mut *store)

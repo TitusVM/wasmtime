@@ -16,6 +16,7 @@ use wasmtime::component::Component;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 pub static TERMINATE_FLAG: AtomicBool = AtomicBool::new(false);
+pub static AUDIT_PERIOD: Duration = Duration::from_secs(5);
 
 pub enum RunTarget {
     Core(Module),
@@ -263,13 +264,12 @@ impl RunCommon {
                             let bytes_clone = bytes.to_vec();
 
                             use std::thread;
-                            use std::time::Duration;
 
                             let terminate_flag = Arc::new(&TERMINATE_FLAG);
 
                             thread::spawn(move || {
                                 loop {
-                                    thread::sleep(Duration::from_secs(5)); // Adjust the interval as needed
+                                    thread::sleep(AUDIT_PERIOD); // Adjust the interval as needed
                                     if let Err(err) = crate::audit::sbom_check(&bytes_clone) {
                                         eprintln!("SBOM Audit failed during runtime: {}", err);
                                         terminate_flag.store(true, Ordering::SeqCst);

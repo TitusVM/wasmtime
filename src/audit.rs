@@ -9,23 +9,10 @@ use wasmshield::signature::verify;
 
 
 /// Some function
-pub fn audit_process(bytes: &[u8]) -> Result<(), Error> {
+pub fn audit_process(bytes: &[u8], key_path: &Path) -> Result<(), Error> {
 
     // SIGNATURE Check
-
-    use std::io::{stdin,stdout,Write};
-    let mut path=String::new();
-    print!("Please enter the path to the key: ");
-    let _=stdout().flush();
-    stdin().read_line(&mut path).expect("Did not enter a correct string");
-    if let Some('\n')=path.chars().next_back() {
-        path.pop();
-    }
-    if let Some('\r')=path.chars().next_back() {
-        path.pop();
-    }
-
-    let signature = signature_check(bytes, Path::new(&path));
+    let signature = signature_check(bytes, key_path);
 
     match signature {
         Ok(()) => {},
@@ -56,9 +43,9 @@ pub fn sbom_check(bytes: &[u8]) -> Result<(), Error> {
             for report in reports {
                 let name = report.0;
                 let report = report.1;
-                println!("Component: {}", name);
                 if report.vulnerabilities.count != 0 {
                     vuln_flag = true;
+                    println!("Component: {}", name);
                     for vuln in report.vulnerabilities.list {
                         println!("Vulnerability advisory: {}", vuln.advisory.title);
                         println!("Package: {}", vuln.package.name.as_str());
@@ -66,6 +53,7 @@ pub fn sbom_check(bytes: &[u8]) -> Result<(), Error> {
                 }
                 else if report.warnings.len() != 0 {
                     warn_flag = true;
+                    println!("Component: {}", name);
                     for (_, warns) in report.warnings {
                         for warn in warns {
                             println!("Warning type: {:?}", warn.kind);

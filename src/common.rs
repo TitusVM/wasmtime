@@ -105,6 +105,13 @@ pub struct RunCommon {
     /// and prevent/modify execution if certain checks fail.
     #[arg(long = "audit")]
     pub audit: bool,
+
+    /// Path to the public key used for signature verification.
+    ///
+    /// By default, the public key is expected to be in the `keys/audit.pub` directory.
+    /// To specify a path "example/key" use `--key-path example/key` or `-k example/key`.
+    #[arg(long = "key-path", short = 'k', value_name = "PATH")]
+    pub key_path: Option<String>,
 }
 
 fn parse_env_var(s: &str) -> Result<(String, Option<String>)> {
@@ -251,9 +258,27 @@ impl RunCommon {
                             self.ensure_allow_components()?;
 
                             if self.audit {
-                                println!("Auditing");
+                                let key_path = match self.key_path {
+                                    Some(ref key_path) => {
+                                        match std::fs::canonicalize(key_path) {
+                                            Ok(path) => path,
+                                            Err(err) => {
+                                                println!("Path: {:?}", key_path);
+                                                bail!("Could not find key_path: {}", err)
+                                            }
+                                        }
+                                    },
+                                    None => {
+                                        match std::fs::canonicalize("./keys/audit.pub") {
+                                            Ok(path) => path,
+                                            Err(err) => {
+                                                bail!("Could not find default key_path: {}", err)
+                                            }
+                                        }
+                                    },
+                                };
 
-                                match crate::audit::audit_process(bytes) {
+                                match crate::audit::audit_process(bytes, key_path.as_path()) {
                                     Ok(()) => {}
                                     Err(err) => {
                                         bail!("Component could not be safely run: {}", err)

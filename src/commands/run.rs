@@ -475,7 +475,9 @@ impl RunCommand {
                             println!("Terminating due to new vulnerability found during runtime"); 
                             std::process::abort();
                         }
-                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                        // We check more often than the epoch interval to ensure that we can
+                        // interrupt the runtime as soon as possible.
+                        tokio::time::sleep(common::AUDIT_PERIOD / 2).await;
                     }
                 });
 

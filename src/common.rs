@@ -278,7 +278,7 @@ impl RunCommon {
                                     },
                                 };
 
-                                match crate::audit::audit_process(bytes, key_path.as_path()) {
+                                match crate::audit::audit_process(bytes, key_path.as_path(), true) {
                                     Ok(()) => {}
                                     Err(err) => {
                                         bail!("Component could not be safely run: {}", err)
@@ -295,7 +295,7 @@ impl RunCommon {
                             thread::spawn(move || {
                                 loop {
                                     thread::sleep(AUDIT_PERIOD); // Adjust the interval as needed
-                                    if let Err(err) = crate::audit::sbom_check(&bytes_clone) {
+                                    if let Err(err) = crate::audit::sbom_check(&bytes_clone, false) {
                                         eprintln!("SBOM Audit failed during runtime: {}", err);
                                         terminate_flag.store(true, Ordering::SeqCst);
                                         break

@@ -9,7 +9,7 @@ use wasmshield::signature::verify;
 
 
 /// Some function
-pub fn audit_process(bytes: &[u8], key_path: &Path) -> Result<(), Error> {
+pub fn audit_process(bytes: &[u8], key_path: &Path, perform_local_check: bool) -> Result<(), Error> {
 
     // SIGNATURE Check
     let signature = signature_check(bytes, key_path);
@@ -22,7 +22,7 @@ pub fn audit_process(bytes: &[u8], key_path: &Path) -> Result<(), Error> {
     }
 
     // SBOM Check
-    let sbom = sbom_check(bytes);
+    let sbom = sbom_check(bytes, perform_local_check);
 
     match sbom {
         Ok(()) => {},
@@ -35,10 +35,10 @@ pub fn audit_process(bytes: &[u8], key_path: &Path) -> Result<(), Error> {
 }
 
 /// Run SBOM Check
-pub fn sbom_check(bytes: &[u8]) -> Result<(), Error> {
+pub fn sbom_check(bytes: &[u8], perform_local_check: bool) -> Result<(), Error> {
     let mut vuln_flag = false;
     let mut warn_flag = false;
-    match helper_audit(bytes) {
+    match helper_audit(bytes, perform_local_check) {
         Ok(reports) => {
             for report in reports {
                 let name = report.0;
@@ -102,7 +102,7 @@ fn signature_check(bytes: &[u8], key_path: &Path) -> Result<(), Error> {
     }
 }
 
-fn helper_audit(bytes: &[u8]) -> Result<Vec<(String, Report)>> {
+fn helper_audit(bytes: &[u8], perform_local_check: bool) -> Result<Vec<(String, Report)>> {
     let components = wasmshield::decompose::decompose(&bytes);
     let mut reports = Vec::new();
     // Given the way decomposition is implemented, the first component in the list is always the entire
@@ -115,7 +115,7 @@ fn helper_audit(bytes: &[u8]) -> Result<Vec<(String, Report)>> {
         let name = if counter == 0 {"composition".to_string()} else {wasmshield::decompose::get_name(&component)};
         // Skip the skipth component in the component list to avoid redundant reports
         if skip != counter {
-            match sbom_audit(&component, None) {
+            match sbom_audit(&component, perform_local_check, None) {
                 Ok(report) => {
                     reports.push((name, report));
                 },

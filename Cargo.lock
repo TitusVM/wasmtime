@@ -5829,7 +5829,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cargo-audit",
+ "lazy_static",
+ "miniz_oxide 0.8.0",
  "rustsec",
+ "serde_json",
+ "tempfile",
  "toml",
  "wasmparser 0.220.0",
  "wasmsign2",
